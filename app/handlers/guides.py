@@ -46,6 +46,44 @@ async def guide_cb(query: CallbackQuery, state: FSMContext):
     await query.answer()
 
 
+# @router.message(GuideForm.waiting_name)
+# async def guide_name(message: Message, state: FSMContext):
+#     if message.text.lower() == "отмена":
+#         await state.clear()
+#         return await message.answer("Отменено.", reply_markup=main_kb)
+#
+#     await state.update_data(name=message.text.strip())
+#     await state.set_state(GuideForm.waiting_phone)
+#
+#     kb = ReplyKeyboardBuilder()
+#     kb.button(text="Отмена")
+#     await message.answer("Введите ваш телефон (в международном формате +996...):",
+#                          reply_markup=kb.as_markup(resize_keyboard=True))
+#
+#
+# @router.message(GuideForm.waiting_phone)
+# async def guide_phone(message: Message, state: FSMContext):
+#     if message.text.lower() == "отмена":
+#         await state.clear()
+#         return await message.answer("Отменено.", reply_markup=main_kb)
+#
+#     phone = validate_phone(message.text)
+#     if not phone:
+#         return await message.answer("Невалидный номер. Попробуйте ещё раз (+996...).")
+#
+#     await state.update_data(phone=phone)
+#     await state.set_state(GuideForm.waiting_email)
+#
+#     kb = ReplyKeyboardBuilder()
+#     kb.button(text="Пропустить")
+#     kb.button(text="Отмена")
+#     await message.answer("Введите ваш email или нажмите «Пропустить»:",
+#                          reply_markup=kb.as_markup(resize_keyboard=True))
+
+
+from aiogram.types import KeyboardButton
+
+# Шаг 1: ждём имя
 @router.message(GuideForm.waiting_name)
 async def guide_name(message: Message, state: FSMContext):
     if message.text.lower() == "отмена":
@@ -55,30 +93,67 @@ async def guide_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text.strip())
     await state.set_state(GuideForm.waiting_phone)
 
+    # кнопка для отправки номера
     kb = ReplyKeyboardBuilder()
-    kb.button(text="Отмена")
-    await message.answer("Введите ваш телефон (в международном формате +996...):",
-                         reply_markup=kb.as_markup(resize_keyboard=True))
+    kb.row(
+        KeyboardButton(text="📱 Отправить номер", request_contact=True),
+        KeyboardButton(text="Отмена")
+    )
+
+    await message.answer(
+        "Отправьте ваш телефон:",
+        reply_markup=kb.as_markup(resize_keyboard=True, one_time_keyboard=True)
+    )
+@router.message(GuideForm.waiting_phone, F.text.lower() == "отмена")
+async def cancel_phone(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Отменено.", reply_markup=main_kb)
 
 
-@router.message(GuideForm.waiting_phone)
+# для телефона (контакт)
+@router.message(GuideForm.waiting_phone, F.contact)
 async def guide_phone(message: Message, state: FSMContext):
-    if message.text.lower() == "отмена":
-        await state.clear()
-        return await message.answer("Отменено.", reply_markup=main_kb)
-
-    phone = validate_phone(message.text)
-    if not phone:
-        return await message.answer("Невалидный номер. Попробуйте ещё раз (+996...).")
-
+    phone = message.contact.phone_number
     await state.update_data(phone=phone)
     await state.set_state(GuideForm.waiting_email)
 
     kb = ReplyKeyboardBuilder()
-    kb.button(text="Пропустить")
-    kb.button(text="Отмена")
-    await message.answer("Введите ваш email или нажмите «Пропустить»:",
-                         reply_markup=kb.as_markup(resize_keyboard=True))
+    kb.row(
+        KeyboardButton(text="Пропустить"),
+        KeyboardButton(text="Отмена")
+    )
+    await message.answer(
+        "Введите ваш email или нажмите «Пропустить»:",
+        reply_markup=kb.as_markup(resize_keyboard=True)
+    )
+
+# Шаг 2: ждём телефон
+# @router.message(GuideForm.waiting_phone)
+# async def guide_phone(message: Message, state: FSMContext):
+#     if message.text.lower() == "отмена":
+#         await state.clear()
+#         return await message.answer("Отменено.", reply_markup=main_kb)
+#
+#     # проверяем, что это контакт
+#     if not message.contact:
+#         return await message.answer("❗ Пожалуйста, используйте кнопку «📱 Отправить номер».")
+#
+#     phone = message.contact.phone_number
+#     await state.update_data(phone=phone)
+#     await state.set_state(GuideForm.waiting_email)
+#
+#     # кнопки для email шага
+#     kb = ReplyKeyboardBuilder()
+#     kb.row(
+#         KeyboardButton(text="Пропустить"),
+#         KeyboardButton(text="Отмена")
+#     )
+#
+#     await message.answer(
+#         "Введите ваш email или нажмите «Пропустить»:",
+#         reply_markup=kb.as_markup(resize_keyboard=True)
+#     )
+
 
 
 @router.message(GuideForm.waiting_email)

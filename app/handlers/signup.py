@@ -1,6 +1,8 @@
 from aiogram import Router, types, F
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
+
 from app.keyboards import cancel_kb, format_kb, main_kb
 from app.utils import validate_phone
 from app.db import AsyncSessionLocal
@@ -28,6 +30,33 @@ async def signup_start(query: types.CallbackQuery, state: FSMContext):
     await query.answer()
 
 
+# @router.message(Signup.waiting_name)
+# async def signup_name(message: types.Message, state: FSMContext):
+#     if message.text == "❌ Отмена":
+#         await state.clear()
+#         return await message.answer("Отмена записи.", reply_markup=main_kb)
+#
+#     await state.update_data(name=message.text.strip())
+#     await message.answer("Отправьте ваш телефон :", reply_markup=cancel_kb)
+#     await state.set_state(Signup.waiting_phone)
+#
+#
+# @router.message(Signup.waiting_phone)
+# async def signup_phone(message: types.Message, state: FSMContext):
+#     if message.text == "❌ Отмена":
+#         await state.clear()
+#         return await message.answer("Отмена записи.", reply_markup=main_kb)
+#
+#     phone = validate_phone(message.text)
+#     if not phone:
+#         return await message.answer("❗ Неверный формат телефона. Попробуйте снова.")
+#
+#     await state.update_data(phone=phone)
+#     await message.answer("Выберите формат:", reply_markup=format_kb)
+#     await state.set_state(Signup.waiting_format)
+from aiogram.types import KeyboardButton
+
+# Шаг 1: ждём имя
 @router.message(Signup.waiting_name)
 async def signup_name(message: types.Message, state: FSMContext):
     if message.text == "❌ Отмена":
@@ -35,21 +64,35 @@ async def signup_name(message: types.Message, state: FSMContext):
         return await message.answer("Отмена записи.", reply_markup=main_kb)
 
     await state.update_data(name=message.text.strip())
-    await message.answer("Отправьте ваш телефон (пример: +996500123456):", reply_markup=cancel_kb)
+
+    # клавиатура с кнопкой "Отправить номер"
+    kb = ReplyKeyboardBuilder()
+    kb.row(
+        KeyboardButton(text="📱 Отправить номер", request_contact=True),
+        KeyboardButton(text="❌ Отмена")
+    )
+
+    await message.answer(
+        "Отправьте ваш телефон:",
+        reply_markup=kb.as_markup(resize_keyboard=True, one_time_keyboard=True)
+    )
     await state.set_state(Signup.waiting_phone)
 
 
+# Шаг 2: ждём телефон
 @router.message(Signup.waiting_phone)
 async def signup_phone(message: types.Message, state: FSMContext):
     if message.text == "❌ Отмена":
         await state.clear()
         return await message.answer("Отмена записи.", reply_markup=main_kb)
 
-    phone = validate_phone(message.text)
-    if not phone:
-        return await message.answer("❗ Неверный формат телефона. Попробуйте снова.")
+    # ждём контакт
+    if not message.contact:
+        return await message.answer("❗ Пожалуйста, используйте кнопку «📱 Отправить номер».")
 
+    phone = message.contact.phone_number  # телефон из аккаунта
     await state.update_data(phone=phone)
+
     await message.answer("Выберите формат:", reply_markup=format_kb)
     await state.set_state(Signup.waiting_format)
 

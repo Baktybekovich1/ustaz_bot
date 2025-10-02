@@ -3,10 +3,11 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📚 Узнать о курсах"), KeyboardButton(text="🎁 Получить бесплатный гайд")],
-        [ KeyboardButton(text="❓ Задать вопрос")]
+        [KeyboardButton(text="❓ Задать вопрос")]
     ],
     resize_keyboard=True
 )
+
 
 def course_inline():
     return InlineKeyboardMarkup(
@@ -17,6 +18,7 @@ def course_inline():
             [InlineKeyboardButton(text="HTML/CSS", callback_data="course:HTML/CSS")]
         ]
     )
+
 
 def guide_inline() -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(
